@@ -1,4 +1,40 @@
 /**
+ * @param {number} r [0, 1]
+ * @param {number} g [0, 1]
+ * @param {number} b [0, 1]
+ * @returns {number[]} [h[0, 1], s[0, 1], l[0, 1]]
+ */
+export function rgbToHsl(r, g, b) {
+	let max = Math.max(r, g, b);
+	let min = Math.min(r, g, b);
+
+	let h = 0,
+		s = 0,
+		l = (min + max) / 2;
+
+	let d = max - min;
+
+	if (d !== 0) {
+		s = l === 0 || l === 1 ? 0 : (max - l) / Math.min(l, 1 - l);
+
+		switch (max) {
+			case r:
+				h = (g - b) / d + (g < b ? 6 : 0);
+				break;
+			case g:
+				h = (b - r) / d + 2;
+				break;
+			case b:
+				h = (r - g) / d + 4;
+		}
+
+		h /= 6;
+	}
+
+	return [h, s, l];
+}
+
+/**
  * @param {number} hue [0, 360]
  * @param {number} saturation [0, 1]
  * @param {number} lightness [0, 1]
@@ -115,7 +151,70 @@ export function hwbToRgb(hue, white, black) {
 	return rgb;
 }
 
-export const namedColors = {
+export function cmykToRgb(c, m, y, k) {
+	c = c / 100;
+	m = m / 100;
+	y = y / 100;
+	k = k / 100;
+
+	var r = 255 * (1 - c) * (1 - k);
+	var g = 255 * (1 - m) * (1 - k);
+	var b = 255 * (1 - y) * (1 - k);
+
+	return [Math.round(r), Math.round(g), Math.round(b)];
+}
+
+export function labToRgb(l, a, b) {
+	return xyz2rgb(lab2xyz({ l, a, b }));
+}
+
+let refX = 0.95047,
+	refY = 1.0,
+	refZ = 1.08883;
+export function lab2xyz(lab, xyz = {}) {
+	let { l, a, b, alpha } = lab;
+
+	let y = (l + 16) / 116;
+	let x = a / 500 + y;
+	let z = y - b / 200;
+
+	x = x ** 3 > 0.008856 ? x ** 3 : (x - 16 / 116) / 7.787;
+	y = y ** 3 > 0.008856 ? y ** 3 : (y - 16 / 116) / 7.787;
+	z = z ** 3 > 0.008856 ? z ** 3 : (z - 16 / 116) / 7.787;
+
+	x *= refX;
+	y *= refY;
+	z *= refZ;
+
+	xyz.x = x;
+	xyz.y = y;
+	xyz.z = z;
+	xyz.a = alpha;
+	return xyz;
+}
+
+export function xyz2rgb(xyz, rgb = {}) {
+	let { x, y, z, a } = xyz;
+
+	let r = x * 3.2406255 + y * -1.537208 + z * -0.4986286;
+	let g = x * -0.9689307 + y * 1.8757561 + z * 0.0415175;
+	let b = x * 0.0557101 + y * -0.2040211 + z * 1.0569959;
+
+	r = r > 0.0031308 ? 1.055 * r ** (1 / 2.4) - 0.055 : 12.92 * r;
+	g = g > 0.0031308 ? 1.055 * g ** (1 / 2.4) - 0.055 : 12.92 * g;
+	b = b > 0.0031308 ? 1.055 * b ** (1 / 2.4) - 0.055 : 12.92 * b;
+
+	r *= 255;
+	g *= 255;
+	b *= 255;
+	rgb.r = r;
+	rgb.g = g;
+	rgb.b = b;
+	rgb.a = a;
+	return rgb;
+}
+
+const namedColors = {
 	aliceblue: [240, 248, 255],
 	antiquewhite: [250, 235, 215],
 	aqua: [0, 255, 255],
@@ -266,7 +365,12 @@ export const namedColors = {
 	yellowgreen: [154, 205, 50],
 };
 
+/**
+ * @param {string} name
+ * @returns {number[]}
+ */
 export function namedToRgb(name) {
+	name = name.toLowerCase();
 	if (Object.hasOwn(namedColors, name)) {
 		return namedColors[name];
 	}

@@ -1,5 +1,3 @@
-import { hslToRgb, hexToRgb, hwbToRgb, namedToRgb } from './color-convert.mjs';
-
 if (navigator.clipboard) {
 	console.log('ok');
 } else {
@@ -441,9 +439,15 @@ let patterns = (() => {
 	}
 })();
 
-console.log('hslToRgb', hslToRgb(12, 34, 56));
-console.log('hexToRgb', hexToRgb('5db69a'));
-console.log('hwbToRgb', hwbToRgb(12, 34, 56));
+import { hslToRgb, hexToRgb, hwbToRgb, namedToRgb, cmykToRgb, labToRgb, rgbToHsl } from './color-convert.mjs';
+
+console.log('namedToRgb', namedToRgb('yellowgreen'));
+console.log('hslToRgb', hslToRgb(80, 61, 50));
+console.log('hexToRgb', hexToRgb('9acd32'));
+console.log('hwbToRgb', hwbToRgb(80, 20, 20));
+console.log('cmykToRgb', cmykToRgb(25, 0, 76, 20));
+console.log('labToRgb', labToRgb(29.2345, 39.3825, 20.0664));
+console.log('rgbToHsl', rgbToHsl(153 / 255, 205 / 255, 50 / 255));
 
 // navigator.clipboard.readText().then(text => {
 // 	console.log(text);
