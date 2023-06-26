@@ -1,21 +1,47 @@
 /**
+ * clip to the range
+ * @param {number} n
+ * @param {number} [lower = 0]
+ * @param {number} [upper = 1]
+ * @returns {number}
+ */
+function clip(n, lower = 0, upper = 1) {
+	return Math.min(Math.max(lower, n), upper);
+}
+
+/**
+ * wrap around
+ * @param {number} n
+ * @param {number} [lower = 0]
+ * @param {number} [upper = 1]
+ * @returns {number}
+ */
+function wrap(n, lower = 0, upper = 1) {
+	n = (n - lower) % (upper - lower);
+	return n < 0 ? n + upper : n + lower;
+}
+
+/**
  * @param {number} r [0, 1]
  * @param {number} g [0, 1]
  * @param {number} b [0, 1]
  * @returns {number[]} [h[0, 1], s[0, 1], l[0, 1]]
  */
 export function rgbToHsl(r, g, b) {
+	r = clip(r);
+	g = clip(g);
+	b = clip(b);
+
 	let max = Math.max(r, g, b);
 	let min = Math.min(r, g, b);
+
+	let d = max - min;
 
 	let h = 0,
 		s = 0,
 		l = (min + max) / 2;
-
-	let d = max - min;
-
-	if (d !== 0) {
-		s = l === 0 || l === 1 ? 0 : (max - l) / Math.min(l, 1 - l);
+	if (d != 0) {
+		s = l == 0 || l == 1 ? 0 : (max - l) / Math.min(l, 1 - l);
 
 		switch (max) {
 			case r:
@@ -24,7 +50,7 @@ export function rgbToHsl(r, g, b) {
 			case g:
 				h = (b - r) / d + 2;
 				break;
-			case b:
+			default:
 				h = (r - g) / d + 4;
 		}
 
@@ -35,144 +61,239 @@ export function rgbToHsl(r, g, b) {
 }
 
 /**
- * @param {number} hue [0, 360]
- * @param {number} saturation [0, 1]
- * @param {number} lightness [0, 1]
- * @returns {number[]} [r, g, b]
+ * @param {number} h [0, 1]
+ * @param {number} s [0, 1]
+ * @param {number} l [0, 1]
+ * @returns {number[]} [r[0, 1], g[0, 1], b[0, 1]]
  */
 export function hslToRgb(h, s, l) {
-	h = h % 360;
-
-	s = s / 100;
-	l = l / 100;
+	h = wrap(h);
+	s = clip(s);
+	l = clip(l);
 
 	let chroma = (1 - Math.abs(2 * l - 1)) * s;
-
-	let huePrime = h / 60;
+	let huePrime = h * 6;
 	let x = chroma * (1 - Math.abs((huePrime % 2) - 1));
 	let m = l - chroma / 2;
 
 	let r, g, b;
-	if (huePrime < 1) {
-		r = chroma;
-		g = x;
-		b = 0;
-	} else if (huePrime < 2) {
-		r = x;
-		g = chroma;
-		b = 0;
-	} else if (huePrime < 3) {
-		r = 0;
-		g = chroma;
-		b = x;
-	} else if (huePrime < 4) {
-		r = 0;
-		g = x;
-		b = chroma;
-	} else if (huePrime < 5) {
-		r = x;
-		g = 0;
-		b = chroma;
-	} else {
-		r = chroma;
-		g = 0;
-		b = x;
+	switch (huePrime | 0) {
+		case 0:
+			r = chroma;
+			g = x;
+			b = 0;
+			break;
+		case 1:
+			r = x;
+			g = chroma;
+			b = 0;
+			break;
+		case 2:
+			r = 0;
+			g = chroma;
+			b = x;
+			break;
+		case 3:
+			r = 0;
+			g = x;
+			b = chroma;
+			break;
+		case 4:
+			r = x;
+			g = 0;
+			b = chroma;
+			break;
+		default:
+			r = chroma;
+			g = 0;
+			b = x;
+			break;
 	}
 
-	r = Math.round((r + m) * 255);
-	g = Math.round((g + m) * 255);
-	b = Math.round((b + m) * 255);
+	r += m;
+	g += m;
+	b += m;
 
 	return [r, g, b];
 }
 
 /**
- * @param {string} digits length of either 3, 4, 6, or 8
+ * @param {string} hex length of either 3, 4, 6, or 8
  * @returns {number[]} [r, g, b[, a]]
  */
-export function hexToRgb(digits) {
-	let n = parseInt(digits, 16);
-	let r, g, b, a;
-	if (digits.length == 6) {
-		r = (n >> 16) & 255;
-		g = (n >> 8) & 255;
-		b = n & 255;
+export function hexToRgb(hex) {
+	let n = parseInt(hex, 16);
+	if (Number.isNaN(n)) return null;
 
-		return [r, g, b];
-	} else if (digits.length == 8) {
-		r = (n >> 24) & 255;
-		g = (n >> 16) & 255;
-		b = (n >> 8) & 255;
-		a = n & 255;
-	} else {
-		if (digits.length == 3) {
+	let r, g, b, a;
+	switch (hex.length) {
+		case 3:
 			r = (n >> 8) & 15;
+			r |= r << 4;
 			g = (n >> 4) & 15;
+			g |= g << 4;
 			b = n & 15;
-		} else if (digits.length == 4) {
+			b |= b << 4;
+			break;
+		case 4:
 			r = (n >> 12) & 15;
+			r |= r << 4;
 			g = (n >> 8) & 15;
+			g |= g << 4;
 			b = (n >> 4) & 15;
+			b |= b << 4;
 			a = n & 15;
-		}
-		r = (r << 4) | r;
-		g = (g << 4) | g;
-		b = (b << 4) | b;
-		if (digits.length == 3) return [r, g, b];
-		a = (a << 4) | a;
+			a |= a << 4;
+			break;
+		case 6:
+			r = (n >> 16) & 255;
+			g = (n >> 8) & 255;
+			b = n & 255;
+			break;
+		case 8:
+			r = (n >> 24) & 255;
+			g = (n >> 16) & 255;
+			b = (n >> 8) & 255;
+			a = n & 255;
+			break;
+		default:
+			return null;
 	}
+
+	r /= 255;
+	g /= 255;
+	b /= 255;
+	if (a == undefined) return [r, g, b];
+	a /= 255;
 	return [r, g, b, a];
 }
 
+export function rgbToHex(r, g, b) {
+	r = Math.round(r * 255).toString(16);
+	g = Math.round(g * 255).toString(16);
+	b = Math.round(b * 255).toString(16);
+	if (r.length == 1) r = r + r;
+	if (g.length == 1) g = g + g;
+	if (b.length == 1) b = b + b;
+
+	return r + g + b;
+}
+
 /**
- * @param {number} h
- * @param {number} w [0, 100]
- * @param {number} b [0, 100]
- * @returns {number[]}
+ * @param {number} h [0, 1]
+ * @param {number} w [0, 1]
+ * @param {number} b [0, 1]
+ * @returns {number[]} [r, g, b]
  */
-export function hwbToRgb(hue, white, black) {
-	white /= 100;
-	black /= 100;
-	if (white + black >= 1) {
-		let gray = white / (white + black);
-		return [gray, gray, gray];
+export function hwbToRgb(h, w, b) {
+	h = wrap(h);
+	w = clip(w);
+	b = clip(b);
+
+	if (w + b >= 1) {
+		let c = w / (w + b);
+		return [c, c, c];
 	}
-	let rgb = hslToRgb(hue, 100, 50);
-	rgb[0] /= 255;
-	rgb[1] /= 255;
-	rgb[2] /= 255;
+
+	let m = 1 - w - b;
+	let rgb = hslToRgb(h, 1, 0.5);
 	for (let i = 0; i < 3; i++) {
-		rgb[i] *= 1 - white - black;
-		rgb[i] += white;
+		rgb[i] = rgb[i] * m + w;
 	}
-	rgb[0] *= 255;
-	rgb[1] *= 255;
-	rgb[2] *= 255;
+
 	return rgb;
 }
 
-export function cmykToRgb(c, m, y, k) {
-	c = c / 100;
-	m = m / 100;
-	y = y / 100;
-	k = k / 100;
+/**
+ * @param {number} r [0, 1]
+ * @param {number} g [0, 1]
+ * @param {number} b [0, 1]
+ * @returns {number[]} [h, w, b]
+ */
+export function rgbToHwb(r, g, b) {
+	let max = Math.max(r, g, b);
+	let min = Math.min(r, g, b);
+	let delta = max - min;
 
-	var r = 255 * (1 - c) * (1 - k);
-	var g = 255 * (1 - m) * (1 - k);
-	var b = 255 * (1 - y) * (1 - k);
+	let h;
+	if (delta == 0) {
+		h = 0;
+	} else if (max == r) {
+		h = ((g - b) / delta) % 6;
+	} else if (max == g) {
+		h = (b - r) / delta + 2;
+	} else {
+		h = (r - g) / delta + 4;
+	}
 
-	return [Math.round(r), Math.round(g), Math.round(b)];
+	h = h / 6;
+	if (h < 0) {
+		h += 1;
+	}
+
+	return [h, min, 1 - max];
 }
 
+/**
+ * @param {number} c [0, 1]
+ * @param {number} m [0, 1]
+ * @param {number} y [0, 1]
+ * @param {number} k [0, 1]
+ * @returns {number[]} [r, g, b]
+ */
+export function cmykToRgb(c, m, y, k) {
+	c = clip(c);
+	m = clip(m);
+	y = clip(y);
+	k = clip(k);
+
+	let r = (1 - c) * (1 - k),
+		g = (1 - m) * (1 - k),
+		b = (1 - y) * (1 - k);
+
+	return [r, g, b];
+}
+
+/**
+ * @param {number} r [0, 1]
+ * @param {number} g [0, 1]
+ * @param {number} b [0, 1]
+ * @returns {number[]} [c, m, y, k]
+ */
+export function rgbToCmyk(r, g, b) {
+	r = clip(r);
+	g = clip(g);
+	b = clip(b);
+
+	let k = 1 - Math.max(r, g, b),
+		c = (1 - r - k) / (1 - k),
+		m = (1 - g - k) / (1 - k),
+		y = (1 - b - k) / (1 - k);
+
+	return [c, m, y, k];
+}
+
+/**
+ * @param {number} l [0, 1]
+ * @param {number} a [-1, 1]
+ * @param {number} b [-1, 1]
+ * @returns {number[]} [r, g, b]
+ */
 export function labToRgb(l, a, b) {
-	return xyz2rgb(lab2xyz({ l, a, b }));
+	l = clip(l);
+	a = clip(a, -1, 1);
+	b = clip(b, -1, 1);
+
+	return xyz2rgb(...lab2xyz(l, a, b));
 }
 
 let refX = 0.95047,
 	refY = 1.0,
 	refZ = 1.08883;
-export function lab2xyz(lab, xyz = {}) {
-	let { l, a, b, alpha } = lab;
+function lab2xyz(l, a, b) {
+	l *= 100;
+	a *= 125;
+	b *= 125;
 
 	let y = (l + 16) / 116;
 	let x = a / 500 + y;
@@ -186,16 +307,10 @@ export function lab2xyz(lab, xyz = {}) {
 	y *= refY;
 	z *= refZ;
 
-	xyz.x = x;
-	xyz.y = y;
-	xyz.z = z;
-	xyz.a = alpha;
-	return xyz;
+	return [x, y, z];
 }
 
-export function xyz2rgb(xyz, rgb = {}) {
-	let { x, y, z, a } = xyz;
-
+function xyz2rgb(x, y, z) {
 	let r = x * 3.2406255 + y * -1.537208 + z * -0.4986286;
 	let g = x * -0.9689307 + y * 1.8757561 + z * 0.0415175;
 	let b = x * 0.0557101 + y * -0.2040211 + z * 1.0569959;
@@ -204,14 +319,53 @@ export function xyz2rgb(xyz, rgb = {}) {
 	g = g > 0.0031308 ? 1.055 * g ** (1 / 2.4) - 0.055 : 12.92 * g;
 	b = b > 0.0031308 ? 1.055 * b ** (1 / 2.4) - 0.055 : 12.92 * b;
 
-	r *= 255;
-	g *= 255;
-	b *= 255;
-	rgb.r = r;
-	rgb.g = g;
-	rgb.b = b;
-	rgb.a = a;
-	return rgb;
+	r = clip(r);
+	g = clip(g);
+	b = clip(b);
+
+	return [r, g, b];
+}
+
+/**
+ * @param {number} r [0, 1]
+ * @param {number} g [0, 1]
+ * @param {number} b [0, 1]
+ * @returns {number[]} [r, g, b]
+ */
+export function rgbToLab(r, g, b) {
+	r = clip(r);
+	g = clip(g);
+	b = clip(b);
+
+	return xyz2lab(...rgb2xyz(r, g, b));
+}
+
+function rgb2xyz(r, g, b) {
+	r = r > 0.04045 ? ((r + 0.055) / 1.055) ** 2.4 : r / 12.92;
+	g = g > 0.04045 ? ((g + 0.055) / 1.055) ** 2.4 : g / 12.92;
+	b = b > 0.04045 ? ((b + 0.055) / 1.055) ** 2.4 : b / 12.92;
+
+	let x = r * 0.4123956 + g * 0.3575834 + b * 0.1804926;
+	let y = r * 0.2125862 + g * 0.7151703 + b * 0.0722005;
+	let z = r * 0.0192972 + g * 0.1191839 + b * 0.9504971;
+
+	return [x, y, z];
+}
+
+function xyz2lab(x, y, z) {
+	x /= refX;
+	y /= refY;
+	z /= refZ;
+
+	x = x > 0.008856 ? x ** (1 / 3) : 7.787 * x + 16 / 116;
+	y = y > 0.008856 ? y ** (1 / 3) : 7.787 * y + 16 / 116;
+	z = z > 0.008856 ? z ** (1 / 3) : 7.787 * z + 16 / 116;
+
+	let l = 116 * y - 16;
+	let a = 500 * (x - y);
+	let b = 200 * (y - z);
+
+	return [l / 100, a / 125, b / 125];
 }
 
 const namedColors = {
@@ -371,8 +525,32 @@ const namedColors = {
  */
 export function namedToRgb(name) {
 	name = name.toLowerCase();
-	if (Object.hasOwn(namedColors, name)) {
-		return namedColors[name];
-	}
-	return null;
+	return Object.hasOwn(namedColors, name) ? namedColors[name] : null;
 }
+
+console.log('namedToRgb', namedToRgb('yellowgreen'));
+
+console.log('hexToRgb', hexToRgb('9acd32'));
+
+console.log(
+	'hexToRgb',
+	hexToRgb(rgbToHex(153 / 255, 205 / 255, 50 / 255)).map(e => Math.round(e * 255))
+);
+
+console.log(
+	'rgbToHwb',
+	hwbToRgb(...rgbToHwb(153 / 255, 205 / 255, 50 / 255)).map(e => Math.round(e * 255))
+);
+console.log(
+	'rgbToHsl',
+	hslToRgb(...rgbToHsl(153 / 255, 205 / 255, 50 / 255)).map(e => Math.round(e * 255))
+);
+console.log(
+	'rgbToCmyk',
+	cmykToRgb(...rgbToCmyk(153 / 255, 205 / 255, 50 / 255)).map(e => Math.round(e * 255))
+);
+
+console.log(
+	'rgbToLab',
+	labToRgb(...rgbToLab(153 / 255, 205 / 255, 50 / 255)).map(e => Math.round(e * 255))
+);
