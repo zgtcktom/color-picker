@@ -1,56 +1,77 @@
-if (navigator.clipboard) {
-	console.log('ok');
-} else {
-	// nope 😢
-}
+if (typeof window != 'undefined') {
+	if (navigator.clipboard) {
+		console.log('ok');
+	} else {
+		// nope 😢
+	}
 
-/**
- * @param {File} file
- * @returns {Promise<HTMLImageElement>}
- */
-function readAsImage(file) {
-	return new Promise((resolve, reject) => {
-		let image = new Image();
-		let reader = new FileReader();
+	/**
+	 * @param {File} file
+	 * @returns {Promise<HTMLImageElement>}
+	 */
+	function readAsImage(file) {
+		return new Promise((resolve, reject) => {
+			let image = new Image();
+			let reader = new FileReader();
 
-		reader.onload = function () {
-			image.src = reader.result;
-		};
-		reader.onerror = reject;
+			reader.onload = function () {
+				image.src = reader.result;
+			};
+			reader.onerror = reject;
 
-		image.onload = function () {
-			resolve(image);
-		};
-		image.onerror = reject;
+			image.onload = function () {
+				resolve(image);
+			};
+			image.onerror = reject;
 
-		reader.readAsDataURL(file);
-	});
-}
+			reader.readAsDataURL(file);
+		});
+	}
 
-let container = document.querySelector('#colorpicker');
+	let container = document.querySelector('#colorpicker');
 
-let grids = 9;
+	let grids = 9;
 
-let template = document.createElement('template');
-template.innerHTML = `
+	let template = document.createElement('template');
+	template.innerHTML = `
 <style>
+	*{
+		box-sizing: border-box;
+	}
 	.eyedropper {
+		margin: 5vw;
 		position: relative;
+		cursor: crosshair;
 	}
 	.eyedropper > img {
-		cursor: crosshair;
-		margin: 2vw;
+		margin: 5vw;
+		image-rendering: pixelated;
+		object-fit: contain;
+		width: 80%;
 	}
 	.lens {
 		z-index: 999;
 		position: absolute;
 		overflow: hidden;
-		display: none;
+		visibility: hidden;
 		width: 110px;
 		aspect-ratio: 1 / 1;
 		background: #444;
 		border-radius: 50%;
-		box-shadow: 0 0 3px rgb(0, 0, 0, 0.7);
+		box-shadow: 0 0 3px rgb(0, 0, 0, 0.5);
+		pointer-events: none;
+		margin: 0;
+		transition: margin 0.2s ease-out;
+	}
+	.lens::after{
+		content: '';
+		display: block;
+		width:100%;height:100%;
+		border-radius: 50%;
+		position: absolute;
+		top:0;
+		left:0;
+		box-shadow: inset 0 0 7px rgb(0 0 0 / 0.1);
 	}
 	.vgrid,
 	.hgrid {
@@ -68,7 +89,7 @@ template.innerHTML = `
 	.vgrid > *,
 	.hgrid > * {
 		display: block;
-		background: rgb(0, 0, 0, 0.3);
+		background: rgb(0 0 0 / 0.2);
 	}
 	.vgrid > * {
 		width: 100%;
@@ -81,13 +102,11 @@ template.innerHTML = `
 	.center {
 		box-sizing: border-box;
 		position: absolute;
-		top: 0;
-		left: 0;
-		width: calc(100% / ${grids} + 1px);
+		width: calc(100% / ${grids} + 1.5px);
 		aspect-ratio: 1 / 1;
 		border: 1px solid red;
-		top: calc(50% - (100% / ${grids} + 1px) / 2);
-		left: calc(50% - (100% / ${grids} + 1px) / 2);
+		top: calc(50% - (100% / ${grids} + 1.5px) / 2);
+		left: calc(50% - (100% / ${grids} + 1.5px) / 2);
 		filter: invert(100%);
 	}
 
@@ -106,90 +125,254 @@ template.innerHTML = `
 </div>
 `;
 
-document.body.addEventListener('paste', function (event) {
-	for (let file of event.clipboardData.files) {
-		if (file.type.startsWith('image/')) {
-			readAsImage(file).then(image => {
-				/** @type {DocumentFragment} */
-				let fragment = template.content.cloneNode(true);
+	let preferredWidth = 500,
+		preferredHeight = 500;
 
-				/** @type {HTMLElement} */
-				let eyedropper = fragment.querySelector('.eyedropper');
+	/**
+	 *
+	 * @param {HTMLImageElement} image
+	 */
+	function imageHandler(image) {
+		/** @type {DocumentFragment} */
+		let fragment = template.content.cloneNode(true);
 
-				/** @type {HTMLElement} */
-				let lens = fragment.querySelector('.lens');
+		/** @type {HTMLElement} */
+		let eyedropper = fragment.querySelector('.eyedropper');
 
-				/** @type {HTMLImageElement} */
-				let zoomed = image.cloneNode();
+		/** @type {HTMLElement} */
+		let lens = fragment.querySelector('.lens');
 
-				/** @type {HTMLCanvasElement} */
-				let sampler = fragment.querySelector('.sampler');
+		/** @type {HTMLImageElement} */
+		let zoomed = image.cloneNode();
 
-				image.onpointerenter = function (event) {
-					zoom(event.offsetX, event.offsetY);
-					lens.style.display = 'block';
-				};
+		/** @type {HTMLCanvasElement} */
+		let sampler = fragment.querySelector('.sampler');
 
-				image.onpointerleave = function (event) {
-					lens.style.display = 'none';
-				};
-
-				image.onpointermove = function (event) {
-					zoom(event.offsetX, event.offsetY);
-					console.log(getPixel(event.offsetX, event.offsetY));
-				};
-
-				eyedropper.append(image);
-				lens.prepend(zoomed);
-
-				let shadow = container.shadowRoot ?? container.attachShadow({ mode: 'open' });
-				shadow.replaceChildren(fragment);
-
-				/**
-				 * @param {number} x
-				 * @param {number} y
-				 */
-				function zoom(x, y) {
-					x = Math.round(x);
-					y = Math.round(y);
-
-					lens.style.left = x + image.offsetLeft + 10 + 'px';
-					lens.style.top = y + image.offsetTop + 10 + 'px';
-
-					let pixelSize = Math.round(lens.clientWidth / grids);
-					zoomed.style.width = image.width * pixelSize + 'px';
-
-					let ratio = zoomed.clientWidth / image.clientWidth;
-					let offset = lens.clientWidth / 2 - pixelSize / 2;
-					zoomed.style.left = Math.round(-x * ratio + offset) + 'px';
-					zoomed.style.top = Math.round(-y * ratio + offset) + 'px';
-				}
-
-				sampler.width = image.width;
-				sampler.height = image.height;
-				let ctx = sampler.getContext('2d');
-				ctx.drawImage(image, 0, 0);
-				let data = ctx.getImageData(0, 0, image.width, image.height).data;
-
-				/**
-				 * @param {number} x
-				 * @param {number} y
-				 */
-				function getPixel(x, y) {
-					x = Math.round(x);
-					y = Math.round(y);
-
-					let position = (y * image.width + x) * 4;
-					return [data[position], data[position + 1], data[position + 2], data[position + 3]];
-				}
-			});
+		function getCoords(event) {
+			let rect = image.getBoundingClientRect();
+			let x = event.clientX - rect.x,
+				y = event.clientY - rect.y;
+			return [x, y];
 		}
-		console.log(file);
+
+		function onmove(event) {
+			let [x, y] = getCoords(event);
+
+			// console.log(event.x, event.pageX);
+			zoom(x, y);
+		}
+
+		eyedropper.onpointerenter = function (event) {
+			onmove(event);
+			lens.style.visibility = 'visible';
+		};
+
+		eyedropper.onpointerleave = function (event) {
+			lens.style.visibility = 'hidden';
+		};
+
+		eyedropper.onpointermove = function (event) {
+			onmove(event);
+			if (pointerdown) {
+				let [x, y] = getCoords(event);
+				pickColor(x, y);
+			}
+		};
+
+		function pickColor(x, y) {
+			let pixel = getPixel(x, y);
+			if (pixel[0] == undefined) {
+				pixel = [0, 0, 0, 0];
+			}
+			pixel = pixel.map(c => c / 255);
+			{
+				let text;
+				let [r, g, b, a] = pixel;
+				r = Math.round(r * 255);
+				g = Math.round(g * 255);
+				b = Math.round(b * 255);
+				a = +(a * 100).toFixed(2) + '%';
+				if (a == '100%') {
+					text = `rgb(${r} ${g} ${b})`;
+				} else {
+					text = `rgb(${r} ${g} ${b} / ${a})`;
+				}
+				colorList.rgb.value = text;
+			}
+			{
+				let text;
+				let [r, g, b, a] = pixel;
+				r = Math.round(r * 255);
+				g = Math.round(g * 255);
+				b = Math.round(b * 255);
+				a = +a.toFixed(2);
+				if (a == 1) {
+					text = `rgb(${r}, ${g}, ${b})`;
+				} else {
+					text = `rgba(${r}, ${g}, ${b}, ${a})`;
+				}
+				colorList.rgbLegacy.value = text;
+			}
+			{
+				let text = `#${rgbToHex(...pixel).toUpperCase()}`;
+				colorList.hex.value = text;
+			}
+			{
+				let text;
+				if (pixel[3] == 1) {
+					text = `${rgbToNamed(...pixel)}`;
+				} else {
+					text = '';
+				}
+
+				if (text == 'null') text = '';
+
+				colorList.named.value = text;
+			}
+			{
+				let text;
+				let [r, g, b, a] = pixel;
+				a = +(a * 100).toFixed(2) + '%';
+
+				let [h, s, l] = rgbToHsl(r, g, b);
+				h = Math.round(h * 360);
+				s = +(s * 100).toFixed(2) + '%';
+				l = +(l * 100).toFixed(2) + '%';
+				if (a == '100%') {
+					text = `hsl(${h} ${s} ${l})`;
+				} else {
+					text = `hsl(${h} ${s} ${l} / ${1})`;
+				}
+
+				colorList.hsl.value = text;
+			}
+			console.log(pixel);
+		}
+
+		let pointerdown = false;
+		eyedropper.onpointerdown = function (event) {
+			pointerdown = true;
+			event.preventDefault();
+			let [x, y] = getCoords(event);
+			pickColor(x, y);
+		};
+
+		eyedropper.onpointerup = function (event) {
+			pointerdown = false;
+			let [x, y] = getCoords(event);
+			pickColor(x, y);
+		};
+
+		eyedropper.append(image);
+		lens.prepend(zoomed);
+
+		let shadow = container.shadowRoot ?? container.attachShadow({ mode: 'open' });
+		shadow.replaceChildren(fragment);
+
+		/**
+		 * @param {number} x
+		 * @param {number} y
+		 */
+		function zoom(x, y) {
+			x = Math.round(x);
+			y = Math.round(y);
+
+			let offsetLeft = 5,
+				offsetTop = 5;
+
+			let left = x + image.offsetLeft + offsetLeft;
+			let top = y + image.offsetTop + offsetTop;
+
+			let rect = image.offsetParent.getBoundingClientRect();
+
+			// console.log(rect.x + left + lens.clientWidth, document.documentElement.clientWidth);
+
+			let root = document.documentElement;
+
+			let right = rect.left + left + lens.clientWidth,
+				bottom = rect.top + top + lens.clientHeight;
+			let overflowX = right > root.getBoundingClientRect().right || right > window.innerWidth,
+				overflowY = bottom > root.getBoundingClientRect().bottom || bottom > window.innerHeight;
+
+			lens.style.marginTop = overflowY ? -lens.clientHeight - offsetTop * 2 + 'px' : 0;
+			lens.style.marginLeft = overflowX ? -lens.clientWidth - offsetLeft * 2 + 'px' : 0;
+
+			lens.style.top = top + 'px';
+			lens.style.left = left + 'px';
+
+			// console.log(lens.clientWidth);
+
+			let pixelSize = Math.round(lens.clientWidth / grids);
+			zoomed.style.width = image.naturalWidth * pixelSize + ((image.naturalWidth * pixelSize) % 2) + 'px';
+
+			let ratio = zoomed.clientWidth / image.width;
+			let offset = (lens.clientWidth - pixelSize) / 2;
+
+			let scale = image.width / image.naturalWidth;
+
+			zoomed.style.left = Math.round(((-x / scale) | 0) * scale * ratio + offset) + 'px';
+			zoomed.style.top = Math.round(((-y / scale) | 0) * scale * ratio + offset) + 'px';
+		}
+
+		sampler.width = image.naturalWidth;
+		sampler.height = image.naturalHeight;
+		let ctx = sampler.getContext('2d');
+		ctx.drawImage(image, 0, 0);
+		let data = ctx.getImageData(0, 0, image.naturalWidth, image.naturalHeight).data;
+
+		/**
+		 * @param {number} x
+		 * @param {number} y
+		 */
+		function getPixel(x, y) {
+			let scale = image.width / image.naturalWidth;
+			// console.log(x, y, image.width, image.height);
+			x = (x / scale) | 0;
+			y = (y / scale) | 0;
+
+			let position = (y * image.naturalWidth + x) * 4;
+			return [data[position], data[position + 1], data[position + 2], data[position + 3]];
+		}
 	}
 
-	let text = event.clipboardData.getData('text/plain');
-	console.log('event.clipboardData', text);
-});
+	function createImage(pixels) {
+		return new Promise((resolve, reject) => {
+			let image = new Image();
+			image.onload = function () {
+				resolve(image);
+			};
+			image.onerror = reject;
+			let canvas = document.createElement('canvas');
+			canvas.width = 1;
+			canvas.height = 1;
+			let ctx = canvas.getContext('2d');
+			let data = new ImageData(new Uint8ClampedArray(pixels), 1, 1);
+			ctx.putImageData(data, 0, 0);
+
+			image.src = canvas.toDataURL();
+		});
+	}
+
+	document.body.addEventListener('paste', function (event) {
+		for (let file of event.clipboardData.files) {
+			if (file.type.startsWith('image/')) {
+				readAsImage(file).then(imageHandler);
+			}
+			console.log(file);
+			return;
+		}
+
+		let text = event.clipboardData.getData('text/plain');
+		let color = parseColor(text);
+		if (color == null) return;
+
+		// #f00
+		console.log('event.clipboardData', color);
+		createImage(color.map(c => Math.round(c * 255))).then(imageHandler);
+	});
+
+	let colorList = document.querySelector('#colorList');
+}
 
 /**
  * Use variables in regexp
@@ -206,7 +389,7 @@ function $(strings, ...patterns) {
 	return new RegExp(result.join(''));
 }
 
-let patterns = (() => {
+let parseColor = (() => {
 	let colors = [
 		'currentcolor',
 		'transparent',
@@ -280,7 +463,7 @@ let patterns = (() => {
 
 			function parseRGB(component) {
 				let value = parsePercentage(component, 0, 255) ?? +component | 0;
-				return Math.min(Math.max(value, 0), 255);
+				return Math.min(Math.max(value, 0), 255) / 255;
 			}
 
 			return [...components.slice(0, 3).map(parseRGB), alpha];
@@ -296,7 +479,7 @@ let patterns = (() => {
 				} else {
 					value = parsePercentage(component, 0, 255) ?? +component | 0;
 				}
-				return Math.min(Math.max(value, 0), 255);
+				return Math.min(Math.max(value, 0), 255) / 255;
 			}
 
 			if (index != -1) {
@@ -314,7 +497,7 @@ let patterns = (() => {
 	}
 
 	function parseHue(string) {
-		if (string == 'none') return 0;
+		if (string == 'none' || string == '0') return 0;
 
 		let hue = dimension.exec(string)?.groups;
 		if (!hue) return null;
@@ -328,11 +511,11 @@ let patterns = (() => {
 		else if (unit == 'turn') hue = hue * 360;
 		else return null;
 
-		return hue % 360;
+		return (hue % 360) / 360;
 	}
 
 	function parsePercentage(string, lower = 0, upper = 1) {
-		if (string == 'none') return 0;
+		if (string == 'none' || string == '0') return 0;
 
 		if (string.at(-1) != '%') return null;
 
@@ -397,6 +580,27 @@ let patterns = (() => {
 		return [parseHue(h), parsePercentage(w), parsePercentage(b), params.alpha];
 	}
 
+	function parseCMYK(paramText) {
+		let params = parseColorFunctionParams(paramText);
+		if (params.length != 4) return null;
+
+		let [c, m, y, k] = params;
+		return [parsePercentage(c), parsePercentage(m), parsePercentage(y), parsePercentage(k), params.alpha];
+	}
+
+	function parseLAB(paramText) {
+		let params = parseColorFunctionParams(paramText);
+		if (params.length != 3) return null;
+
+		let [l, a, b] = params;
+		return [
+			parsePercentage(l) ?? +l / 100,
+			parsePercentage(a) ?? +a / 125,
+			parsePercentage(b) ?? +b / 125,
+			params.alpha,
+		];
+	}
+
 	/**
 	 * @param {string} string
 	 */
@@ -409,10 +613,20 @@ let patterns = (() => {
 				return parseRGB(components);
 			}
 			if (type == 'hsl' || type == 'hsla') {
-				return parseHSL(components);
+				let [h, s, l, a] = parseHSL(components);
+				return [...hslToRgb(h, s, l), a];
 			}
 			if (type == 'hwb') {
-				return parseHWB(components);
+				let [h, w, b, a] = parseHWB(components);
+				return [...hwbToRgb(h, w, b), a];
+			}
+			if (type == 'cmyk') {
+				let [c, m, y, k, a] = parseCMYK(components);
+				return [...cmykToRgb(c, m, y, k), a];
+			}
+			if (type == 'lab') {
+				let [l, a_, b, a] = parseLAB(components);
+				return [...labToRgb(l, a_, b), a];
 			}
 			return null;
 		}
@@ -437,9 +651,22 @@ let patterns = (() => {
 	for (let color of colors) {
 		console.log(parseColor(color));
 	}
+
+	return parseColor;
 })();
 
-import { hslToRgb, hexToRgb, hwbToRgb, namedToRgb, cmykToRgb, labToRgb, rgbToHsl } from './color-convert.mjs';
+import {
+	hslToRgb,
+	hexToRgb,
+	hwbToRgb,
+	namedToRgb,
+	cmykToRgb,
+	labToRgb,
+	rgbToHsl,
+	rgbToHex,
+	rgbToNamed,
+} from './color-convert.mjs';
+console.log(parseColor);
 
 // navigator.clipboard.readText().then(text => {
 // 	console.log(text);

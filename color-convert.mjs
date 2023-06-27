@@ -1,4 +1,8 @@
 /**
+ * All color function values are percentages [0, 1]
+ */
+
+/**
  * clip to the range
  * @param {number} n
  * @param {number} [lower = 0]
@@ -168,13 +172,27 @@ export function hexToRgb(hex) {
 	return [r, g, b, a];
 }
 
-export function rgbToHex(r, g, b) {
+/**
+ *
+ * @param {number} r [0, 1]
+ * @param {number} g [0, 1]
+ * @param {number} b [0, 1]
+ * @param {number} a [0, 1]
+ * @returns {string} #ffffff
+ */
+export function rgbToHex(r, g, b, a = undefined) {
 	r = Math.round(r * 255).toString(16);
 	g = Math.round(g * 255).toString(16);
 	b = Math.round(b * 255).toString(16);
 	if (r.length == 1) r = r + r;
 	if (g.length == 1) g = g + g;
 	if (b.length == 1) b = b + b;
+
+	if (a != undefined && Math.round(a * 255) != 255) {
+		a = Math.round(a * 255).toString(16);
+		if (a.length == 1) a = a + a;
+		return r + g + b + a;
+	}
 
 	return r + g + b;
 }
@@ -519,38 +537,55 @@ const namedColors = {
 	yellowgreen: [154, 205, 50],
 };
 
+const colorNameds = Object.fromEntries(
+	Object.entries(namedColors)
+		.reverse()
+		.map(([name, [r, g, b]]) => [(r << 16) | (g << 8) | b, name])
+);
+
 /**
  * @param {string} name
- * @returns {number[]}
+ * @returns {number[]} [r, g, b]
  */
 export function namedToRgb(name) {
 	name = name.toLowerCase();
-	return Object.hasOwn(namedColors, name) ? namedColors[name] : null;
+	return Object.hasOwn(namedColors, name) ? namedColors[name].map(c => c / 255) : null;
 }
 
-console.log('namedToRgb', namedToRgb('yellowgreen'));
+/**
+ * @param {number} r [0, 1]
+ * @param {number} g [0, 1]
+ * @param {number} b [0, 1]
+ * @returns {string} name
+ */
+export function rgbToNamed(r, g, b) {
+	[r, g, b] = [r, g, b].map(c => Math.round(c * 255));
+	let rgb = (r << 16) | (g << 8) | b;
+	return Object.hasOwn(colorNameds, rgb) ? colorNameds[rgb] : null;
+}
 
-console.log('hexToRgb', hexToRgb('9acd32'));
+if (typeof process != 'undefined' && process.env.NODE_ENV != 'production') {
+	let color = [154 / 255, 205 / 255, 50 / 255];
 
-console.log(
-	'hexToRgb',
-	hexToRgb(rgbToHex(153 / 255, 205 / 255, 50 / 255)).map(e => Math.round(e * 255))
-);
+	function test(anyToRgb, rgbToAny, singleArg = false) {
+		let rgb;
+		if (singleArg) {
+			rgb = anyToRgb(rgbToAny(...color));
+		} else {
+			rgb = anyToRgb(...rgbToAny(...color));
+		}
+		return rgbToHex(...color) == rgbToHex(...rgb);
+	}
 
-console.log(
-	'rgbToHwb',
-	hwbToRgb(...rgbToHwb(153 / 255, 205 / 255, 50 / 255)).map(e => Math.round(e * 255))
-);
-console.log(
-	'rgbToHsl',
-	hslToRgb(...rgbToHsl(153 / 255, 205 / 255, 50 / 255)).map(e => Math.round(e * 255))
-);
-console.log(
-	'rgbToCmyk',
-	cmykToRgb(...rgbToCmyk(153 / 255, 205 / 255, 50 / 255)).map(e => Math.round(e * 255))
-);
+	console.log('namedToRgb', test(namedToRgb, rgbToNamed, true));
 
-console.log(
-	'rgbToLab',
-	labToRgb(...rgbToLab(153 / 255, 205 / 255, 50 / 255)).map(e => Math.round(e * 255))
-);
+	console.log('hexToRgb', test(hexToRgb, rgbToHex, true));
+
+	console.log('rgbToHwb', test(hwbToRgb, rgbToHwb));
+
+	console.log('rgbToHsl', test(hslToRgb, rgbToHsl));
+
+	console.log('rgbToCmyk', test(cmykToRgb, rgbToCmyk));
+
+	console.log('rgbToLab', test(labToRgb, rgbToLab));
+}

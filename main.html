@@ -1,12 +1,83 @@
 <html>
 	<head>
 		<title>Page Title</title>
+		<style>
+			* {
+				box-sizing: border-box;
+				font-family: 'Segoe UI', sans-serif;
+			}
+			html,
+			body {
+				margin: 0;
+			}
+			.color-list {
+				display: grid;
+			}
+			.color-list > .field {
+				height: 2em;
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				margin: 0.5em 0;
+			}
+			.color-list > .field > label {
+				text-align: right;
+				width: 20%;
+				min-width: 5ch;
+				margin: auto 1em auto 0;
+			}
+			.color-list > .field > input {
+				flex: 1;
+				padding: 0.6em;
+				border: 0.1em solid #aaa;
+				border-radius: 0.2em;
+			}
+			.color-list > .field > input:focus {
+				outline: none;
+			}
+		</style>
 	</head>
 	<body>
-		<h1>Heading 1</h1>
+		<div id="colorpicker" style="width: 90vw"></div>
+		<form id="colorList">
+			<div class="color-list">
+				<div class="field">
+					<label>RGB</label>
+					<input type="text" name="rgb" />
+				</div>
+				<div class="field">
+					<label>RGB'</label>
+					<input type="text" name="rgbLegacy" />
+				</div>
+				<div class="field">
+					<label>Hex</label>
+					<input type="text" name="hex" />
+				</div>
+				<div class="field">
+					<label>Named</label>
+					<input type="text" name="named" />
+				</div>
+				<div class="field">
+					<label>HSL</label>
+					<input type="text" name="hsl" />
+				</div>
+				<div class="field">
+					<label>HWB</label>
+					<input type="text" name="hwb" />
+				</div>
+				<div class="field">
+					<label>CMYK</label>
+					<input type="text" name="cmyk" />
+				</div>
+				<div class="field">
+					<label>LAB</label>
+					<input type="text" name="lab" />
+				</div>
+			</div>
+		</form>
+		<h1>.</h1>
 		<p style="color: rgb(127 36 40)">Paragraph text goes here.</p>
 		<input />
-		<div id="colorpicker" style="width: 100vw; height: 100vh"></div>
 		<script src="./color.mjs" type="module"></script>
 	</body>
 </html>
