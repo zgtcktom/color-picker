@@ -38,43 +38,45 @@
 		</style>
 	</head>
 	<body>
-		<div id="colorpicker" style="width: 90vw"></div>
-		<form id="colorList">
-			<div class="color-list">
-				<div class="field">
-					<label>RGB</label>
-					<input type="text" name="rgb" />
+		<div style="display: flex; justify-content: row">
+			<div id="colorpicker" style="width: 50%; flex: 1"></div>
+			<form id="colorList" style="flex: 1">
+				<div class="color-list">
+					<div class="field">
+						<label>RGB</label>
+						<input type="text" spellcheck="false" name="rgb" />
+					</div>
+					<div class="field">
+						<label>RGB'</label>
+						<input type="text" spellcheck="false" name="rgbLegacy" />
+					</div>
+					<div class="field">
+						<label>Hex</label>
+						<input type="text" spellcheck="false" name="hex" />
+					</div>
+					<div class="field">
+						<label>Named</label>
+						<input type="text" spellcheck="false" name="named" />
+					</div>
+					<div class="field">
+						<label>HSL</label>
+						<input type="text" spellcheck="false" name="hsl" />
+					</div>
+					<div class="field">
+						<label>HWB</label>
+						<input type="text" spellcheck="false" name="hwb" />
+					</div>
+					<div class="field">
+						<label>CMYK</label>
+						<input type="text" spellcheck="false" name="cmyk" />
+					</div>
+					<div class="field">
+						<label>LAB</label>
+						<input type="text" spellcheck="false" name="lab" />
+					</div>
 				</div>
-				<div class="field">
-					<label>RGB'</label>
-					<input type="text" name="rgbLegacy" />
-				</div>
-				<div class="field">
-					<label>Hex</label>
-					<input type="text" name="hex" />
-				</div>
-				<div class="field">
-					<label>Named</label>
-					<input type="text" name="named" />
-				</div>
-				<div class="field">
-					<label>HSL</label>
-					<input type="text" name="hsl" />
-				</div>
-				<div class="field">
-					<label>HWB</label>
-					<input type="text" name="hwb" />
-				</div>
-				<div class="field">
-					<label>CMYK</label>
-					<input type="text" name="cmyk" />
-				</div>
-				<div class="field">
-					<label>LAB</label>
-					<input type="text" name="lab" />
-				</div>
-			</div>
-		</form>
+			</form>
+		</div>
 		<h1>.</h1>
 		<p style="color: rgb(127 36 40)">Paragraph text goes here.</p>
 		<input />

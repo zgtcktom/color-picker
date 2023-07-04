@@ -39,15 +39,20 @@ if (typeof window != 'undefined') {
 		box-sizing: border-box;
 	}
 	.eyedropper {
-		margin: 5vw;
+		width: 100%;
+		height: 100%;
 		position: relative;
 		cursor: crosshair;
+		display: flex;
 	}
-	.eyedropper > img {
-		margin: 5vw;
+	.eyedropper > .image{
+		flex: 1;
+		overflow: hidden;
+		position:relative;
+	}
+	.eyedropper > .image > img {
+		position:absolute;
 		image-rendering: pixelated;
-		object-fit: contain;
-		width: 80%;
 	}
 	.lens {
 		z-index: 999;
@@ -116,12 +121,13 @@ if (typeof window != 'undefined') {
 	}
 </style>
 <div class="eyedropper">
+	<canvas class="sampler" hidden></canvas>
+	<div class="image"></div>
 	<div class="lens">
 		<div class="vgrid">${'<i></i>'.repeat(grids + 1)}</div>
 		<div class="hgrid">${'<i></i>'.repeat(grids + 1)}</div>
 		<div class="center"></div>
 	</div>
-	<canvas class="sampler" hidden></canvas>
 </div>
 `;
 
@@ -148,6 +154,26 @@ if (typeof window != 'undefined') {
 		/** @type {HTMLCanvasElement} */
 		let sampler = fragment.querySelector('.sampler');
 
+		function resize() {
+			let rect = container.getBoundingClientRect();
+			if (image.naturalWidth / rect.width > image.naturalHeight / rect.height) {
+				image.style.width = Math.round(rect.width * zoomScale()) + 'px';
+				image.style.height = '';
+			} else {
+				image.style.width = '';
+				image.style.height = Math.round(rect.height * zoomScale()) + 'px';
+			}
+		}
+
+		new ResizeObserver(entries => {
+			for (const entry of entries) {
+				let container = entry.target;
+				resize();
+				console.log('image resize', image.style.width, image.style.height);
+				console.log(container.clientWidth, container.clientHeight);
+			}
+		}).observe(fragment.querySelector('.image'));
+
 		function getCoords(event) {
 			let rect = image.getBoundingClientRect();
 			let x = event.clientX - rect.x,
@@ -161,6 +187,30 @@ if (typeof window != 'undefined') {
 			// console.log(event.x, event.pageX);
 			zoom(x, y);
 		}
+
+		let zoomLevel = 0;
+		let [maxZoomLevel, minZoomLevel] = [50, -50];
+
+		function zoomScale() {
+			return 1.02 ** zoomLevel;
+		}
+
+		eyedropper.onwheel = function (event) {
+			let [x, y] = getCoords(event).map(c => c / zoomScale());
+			console.log('before', x, y);
+
+			zoomLevel = Math.round(zoomLevel + event.deltaY);
+			zoomLevel = Math.min(Math.max(zoomLevel, minZoomLevel), maxZoomLevel);
+			resize();
+			// [x, y] = [x, y].map(c => c * zoomScale());
+			console.log(x, y);
+			let [x_, y_] = getCoords(event);
+			console.log('height', image.clientHeight - image.naturalHeight);
+			image.style.top =
+				Math.round(-(y / image.naturalHeight) * (image.clientHeight - image.naturalHeight)) + 'px';
+			image.style.left =
+				Math.round(-(x / image.naturalWidth) * (image.clientWidth - image.naturalWidth)) + 'px';
+		};
 
 		eyedropper.onpointerenter = function (event) {
 			onmove(event);
@@ -222,10 +272,8 @@ if (typeof window != 'undefined') {
 				if (pixel[3] == 1) {
 					text = `${rgbToNamed(...pixel)}`;
 				} else {
-					text = '';
+					text = 'null';
 				}
-
-				if (text == 'null') text = '';
 
 				colorList.named.value = text;
 			}
@@ -241,12 +289,64 @@ if (typeof window != 'undefined') {
 				if (a == '100%') {
 					text = `hsl(${h} ${s} ${l})`;
 				} else {
-					text = `hsl(${h} ${s} ${l} / ${1})`;
+					text = `hsl(${h} ${s} ${l} / ${a})`;
 				}
 
 				colorList.hsl.value = text;
 			}
+			{
+				let text;
+				let [r, g, b, a] = pixel;
+				a = +(a * 100).toFixed(2) + '%';
+
+				let [h, w, black] = rgbToHwb(r, g, b);
+				h = Math.round(h * 360);
+				w = +(w * 100).toFixed(2) + '%';
+				black = +(black * 100).toFixed(2) + '%';
+				if (a == '100%') {
+					text = `hwb(${h} ${w} ${black})`;
+				} else {
+					text = `hwb(${h} ${w} ${black} / ${a})`;
+				}
+
+				colorList.hwb.value = text;
+			}
+			{
+				let text;
+				let [r, g, b, a] = pixel;
+				a = +(a * 100).toFixed(2) + '%';
+
+				let [c, m, y, k] = rgbToCmyk(r, g, b);
+				c = +(c * 100).toFixed(2) + '%';
+				m = +(m * 100).toFixed(2) + '%';
+				y = +(y * 100).toFixed(2) + '%';
+				k = +(k * 100).toFixed(2) + '%';
+				if (a == '100%') {
+					text = `cmyk(${c} ${m} ${y} ${k})`;
+				} else {
+					text = `cmyk(${c} ${m} ${y} ${k} / ${a})`;
+				}
+
+				colorList.cmyk.value = text;
+			}
+			{
+				let text;
+				let [r, g, b, a] = pixel;
+				a = +(a * 100).toFixed(2) + '%';
+
+				let [l, a_, b_] = rgbToLab(r, g, b);
+				[l, a_, b_] = [l, a_, b_].map(c => +(c * 100).toFixed(2) + '%');
+				if (a == '100%') {
+					text = `lab(${l} ${a_} ${b_})`;
+				} else {
+					text = `lab(${l} ${a_} ${b_} / ${a})`;
+				}
+
+				colorList.lab.value = text;
+			}
 			console.log(pixel);
+
+			console.log(rgbToLab(1, 1, 1));
 		}
 
 		let pointerdown = false;
@@ -263,7 +363,7 @@ if (typeof window != 'undefined') {
 			pickColor(x, y);
 		};
 
-		eyedropper.append(image);
+		eyedropper.querySelector('.image').append(image);
 		lens.prepend(zoomed);
 
 		let shadow = container.shadowRoot ?? container.attachShadow({ mode: 'open' });
@@ -665,8 +765,11 @@ import {
 	rgbToHsl,
 	rgbToHex,
 	rgbToNamed,
+	rgbToHwb,
+	rgbToCmyk,
+	rgbToLab,
 } from './color-convert.mjs';
-console.log(parseColor);
+console.log(rgbToCmyk(0, 0, 0));
 
 // navigator.clipboard.readText().then(text => {
 // 	console.log(text);
