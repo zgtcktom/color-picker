@@ -154,15 +154,23 @@ if (typeof window != 'undefined') {
 		/** @type {HTMLCanvasElement} */
 		let sampler = fragment.querySelector('.sampler');
 
+		let centerX = 0.5,
+			centerY = 0.5;
+
 		function resize() {
 			let rect = container.getBoundingClientRect();
+			let width, height;
 			if (image.naturalWidth / rect.width > image.naturalHeight / rect.height) {
-				image.style.width = Math.round(rect.width * zoomScale()) + 'px';
-				image.style.height = '';
+				width = rect.width * zoomScale();
+				height = (width / image.naturalWidth) * image.naturalHeight;
 			} else {
-				image.style.width = '';
-				image.style.height = Math.round(rect.height * zoomScale()) + 'px';
+				height = rect.height * zoomScale();
+				width = (height / image.naturalHeight) * image.naturalWidth;
 			}
+			image.style.width = Math.round(width) + 'px';
+			image.style.height = Math.round(height) + 'px';
+			image.style.left = Math.round(width / 2 - rect.width * centerX + (rect.width - width)) + 'px';
+			image.style.top = Math.round(height / 2 - rect.height * centerY + (rect.height - height)) + 'px';
 		}
 
 		new ResizeObserver(entries => {
@@ -189,27 +197,29 @@ if (typeof window != 'undefined') {
 		}
 
 		let zoomLevel = 0;
-		let [maxZoomLevel, minZoomLevel] = [50, -50];
+		let [maxZoomLevel, minZoomLevel] = [200, -50];
 
 		function zoomScale() {
 			return 1.02 ** zoomLevel;
 		}
 
 		eyedropper.onwheel = function (event) {
-			let [x, y] = getCoords(event).map(c => c / zoomScale());
-			console.log('before', x, y);
+			event.preventDefault();
+			let rect = container.getBoundingClientRect();
+			let focusX = (event.clientX - rect.x) / rect.width,
+				focusY = (event.clientY - rect.y) / rect.height;
 
-			zoomLevel = Math.round(zoomLevel + event.deltaY);
+			let currentZoomScale = zoomScale();
+			zoomLevel = Math.round(zoomLevel + -event.deltaY / 20);
 			zoomLevel = Math.min(Math.max(zoomLevel, minZoomLevel), maxZoomLevel);
+			let [x, y] = getCoords(event).map(c => c / zoomScale());
+
+			centerX -= ((0.5 - focusX) / 0.5) * (zoomScale() / currentZoomScale - 1);
+			centerY -= ((0.5 - focusY) / 0.5) * (zoomScale() / currentZoomScale - 1);
+
+			console.log('center', centerX - focusX, currentZoomScale / zoomScale() / 2);
+
 			resize();
-			// [x, y] = [x, y].map(c => c * zoomScale());
-			console.log(x, y);
-			let [x_, y_] = getCoords(event);
-			console.log('height', image.clientHeight - image.naturalHeight);
-			image.style.top =
-				Math.round(-(y / image.naturalHeight) * (image.clientHeight - image.naturalHeight)) + 'px';
-			image.style.left =
-				Math.round(-(x / image.naturalWidth) * (image.clientWidth - image.naturalWidth)) + 'px';
 		};
 
 		eyedropper.onpointerenter = function (event) {
