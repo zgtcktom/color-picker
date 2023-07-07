@@ -214,8 +214,8 @@ if (typeof window != 'undefined') {
 			zoomLevel = Math.min(Math.max(zoomLevel, minZoomLevel), maxZoomLevel);
 			let [x, y] = getCoords(event).map(c => c / zoomScale());
 
-			centerX -= ((0.5 - focusX) / 0.5) * (zoomScale() / currentZoomScale - 1);
-			centerY -= ((0.5 - focusY) / 0.5) * (zoomScale() / currentZoomScale - 1);
+			centerX -= (centerX - focusX) * (currentZoomScale / zoomScale() - 1);
+			centerY -= (centerX - focusY) * (currentZoomScale / zoomScale() - 1);
 
 			console.log('center', centerX - focusX, currentZoomScale / zoomScale() / 2);
 
