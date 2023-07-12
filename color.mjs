@@ -167,20 +167,12 @@ if (typeof window != 'undefined') {
 				height = rect.height * zoomScale();
 				width = (height / image.naturalHeight) * image.naturalWidth;
 			}
+
 			image.style.width = Math.round(width) + 'px';
 			image.style.height = Math.round(height) + 'px';
-			image.style.left = Math.round(width / 2 - rect.width * centerX + (rect.width - width)) + 'px';
-			image.style.top = Math.round(height / 2 - rect.height * centerY + (rect.height - height)) + 'px';
+			// image.style.left = Math.round(width / 2 - rect.width * centerX + (rect.width - width)) + 'px';
+			// image.style.top = Math.round(height / 2 - rect.height * centerY + (rect.height - height)) + 'px';
 		}
-
-		new ResizeObserver(entries => {
-			for (const entry of entries) {
-				let container = entry.target;
-				resize();
-				console.log('image resize', image.style.width, image.style.height);
-				console.log(container.clientWidth, container.clientHeight);
-			}
-		}).observe(fragment.querySelector('.image'));
 
 		function getCoords(event) {
 			let rect = image.getBoundingClientRect();
@@ -203,23 +195,46 @@ if (typeof window != 'undefined') {
 			return 1.02 ** zoomLevel;
 		}
 
+		function setCenter(centerX, centerY, parentX = 0.5, parentY = 0.5) {
+			let { width, height } = image.getBoundingClientRect();
+			let { width: parentWidth, height: parentHeight } = container.getBoundingClientRect();
+			let x = -width * centerX + parentWidth * parentX;
+			let y = -height * centerY + parentHeight * parentY;
+			image.style.left = `${Math.round(x)}px`;
+			image.style.top = `${Math.round(y)}px`;
+			console.log(width, height, x, y, parentWidth, centerX, centerY);
+		}
+
+		function getCenter(parentX = 0.5, parentY = 0.5) {
+			let rect = image.getBoundingClientRect();
+			let parentRect = container.getBoundingClientRect();
+			let { width, height } = rect;
+			let { width: parentWidth, height: parentHeight } = parentRect;
+
+			let x = rect.x - parentRect.x;
+			let y = rect.y - parentRect.y;
+			let centerX = (x - parentWidth * parentX) / -width;
+			let centerY = (y - parentHeight * parentY) / -height;
+			return { centerX, centerY };
+		}
+
 		eyedropper.onwheel = function (event) {
 			event.preventDefault();
-			let rect = container.getBoundingClientRect();
-			let focusX = (event.clientX - rect.x) / rect.width,
-				focusY = (event.clientY - rect.y) / rect.height;
+			let parentRect = container.getBoundingClientRect();
+			let parentX = (event.clientX - parentRect.x) / parentRect.width,
+				parentY = (event.clientY - parentRect.y) / parentRect.height;
 
-			let currentZoomScale = zoomScale();
+			let rect = image.getBoundingClientRect();
+			centerX = (event.clientX - rect.x - parentRect.x) / rect.width;
+			centerY = (event.clientY - rect.y - parentRect.y) / rect.height;
+
 			zoomLevel = Math.round(zoomLevel + -event.deltaY / 20);
 			zoomLevel = Math.min(Math.max(zoomLevel, minZoomLevel), maxZoomLevel);
-			let [x, y] = getCoords(event).map(c => c / zoomScale());
-
-			centerX -= (centerX - focusX) * (currentZoomScale / zoomScale() - 1);
-			centerY -= (centerX - focusY) * (currentZoomScale / zoomScale() - 1);
-
-			console.log('center', centerX - focusX, currentZoomScale / zoomScale() / 2);
 
 			resize();
+
+			setCenter(centerX, centerY, parentX, parentY);
+			({ centerX, centerY } = getCenter());
 		};
 
 		eyedropper.onpointerenter = function (event) {
@@ -378,6 +393,13 @@ if (typeof window != 'undefined') {
 
 		let shadow = container.shadowRoot ?? container.attachShadow({ mode: 'open' });
 		shadow.replaceChildren(fragment);
+
+		new ResizeObserver(entries => {
+			for (const entry of entries) {
+			}
+			resize();
+			setCenter(centerX, centerY);
+		}).observe(image.offsetParent);
 
 		/**
 		 * @param {number} x
