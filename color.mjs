@@ -196,8 +196,8 @@ if (typeof window != 'undefined') {
 		}
 
 		function setCenter(centerX, centerY, parentX = 0.5, parentY = 0.5) {
-			let { width, height } = image.getBoundingClientRect();
-			let { width: parentWidth, height: parentHeight } = container.getBoundingClientRect();
+			let { width, height } = getAbsoluteRect(image);
+			let { width: parentWidth, height: parentHeight } = getAbsoluteRect(container);
 			let x = -width * centerX + parentWidth * parentX;
 			let y = -height * centerY + parentHeight * parentY;
 			image.style.left = `${Math.round(x)}px`;
@@ -206,8 +206,8 @@ if (typeof window != 'undefined') {
 		}
 
 		function getCenter(parentX = 0.5, parentY = 0.5) {
-			let rect = image.getBoundingClientRect();
-			let parentRect = container.getBoundingClientRect();
+			let rect = getAbsoluteRect(image);
+			let parentRect = getAbsoluteRect(container);
 			let { width, height } = rect;
 			let { width: parentWidth, height: parentHeight } = parentRect;
 
@@ -218,23 +218,47 @@ if (typeof window != 'undefined') {
 			return { centerX, centerY };
 		}
 
-		eyedropper.onwheel = function (event) {
-			event.preventDefault();
-			let parentRect = container.getBoundingClientRect();
-			let parentX = (event.clientX - parentRect.x) / parentRect.width,
-				parentY = (event.clientY - parentRect.y) / parentRect.height;
+		/**
+		 * @param {HTMLElement} element
+		 * @returns {DOMRect}
+		 */
+		function getAbsoluteRect(element) {
+			let { x, y, width, height } = element.getBoundingClientRect();
+			x += window.scrollX;
+			y += window.scrollY;
+			return DOMRect.fromRect({ x, y, width, height });
+		}
 
-			let rect = image.getBoundingClientRect();
-			centerX = (event.clientX - rect.x - parentRect.x) / rect.width;
-			centerY = (event.clientY - rect.y - parentRect.y) / rect.height;
+		container.onwheel = function (event) {
+			event.preventDefault();
+			let parentRect = getAbsoluteRect(container);
+			let parentX = (event.clientX + window.scrollX - parentRect.x) / parentRect.width,
+				parentY = (event.clientY + window.scrollY - parentRect.y) / parentRect.height;
+
+			let rect = getAbsoluteRect(image);
+			// centerX = ;
+			// centerY = ;
 
 			zoomLevel = Math.round(zoomLevel + -event.deltaY / 20);
 			zoomLevel = Math.min(Math.max(zoomLevel, minZoomLevel), maxZoomLevel);
 
 			resize();
 
-			setCenter(centerX, centerY, parentX, parentY);
+			setCenter(
+				(event.clientX + window.scrollX - rect.x - parentRect.x) / rect.width,
+				(event.clientY + window.scrollY - rect.y - parentRect.y) / rect.height,
+				parentX,
+				parentY
+			);
 			({ centerX, centerY } = getCenter());
+		};
+
+		eyedropper.ondblclick = function (event) {
+			centerX = 0.5;
+			centerY = 0.5;
+			zoomLevel = 1;
+			resize();
+			setCenter(centerX, centerY);
 		};
 
 		eyedropper.onpointerenter = function (event) {
@@ -247,11 +271,30 @@ if (typeof window != 'undefined') {
 		};
 
 		eyedropper.onpointermove = function (event) {
-			onmove(event);
 			if (pointerdown) {
 				let [x, y] = getCoords(event);
 				pickColor(x, y);
 			}
+
+			if (rightButton) {
+				let prevOffsetX = offsetX;
+				let prevOffsetY = offsetY;
+				offsetX = event.clientX + window.scrollX;
+				offsetY = event.clientY + window.scrollY;
+
+				let { x, y } = getAbsoluteRect(image);
+
+				x += offsetX - prevOffsetX;
+				y += offsetY - prevOffsetY;
+				console.log(prevOffsetX, x, y);
+
+				image.style.left = `${Math.round(x)}px`;
+				image.style.top = `${Math.round(y)}px`;
+
+				({ centerX, centerY } = getCenter());
+			}
+
+			onmove(event);
 		};
 
 		function pickColor(x, y) {
@@ -375,18 +418,48 @@ if (typeof window != 'undefined') {
 		}
 
 		let pointerdown = false;
+		let rightButton = false;
+
+		let LEFT_MOUSE = 0,
+			RIGHT_MOUSE = 2;
+		let offsetX, offsetY;
 		eyedropper.onpointerdown = function (event) {
-			pointerdown = true;
-			event.preventDefault();
-			let [x, y] = getCoords(event);
-			pickColor(x, y);
+			if (event.button == LEFT_MOUSE) {
+				event.preventDefault();
+				pointerdown = true;
+				let [x, y] = getCoords(event);
+				pickColor(x, y);
+			}
+
+			if (event.button == RIGHT_MOUSE) {
+				event.preventDefault();
+				rightButton = true;
+				offsetX = event.clientX + window.scrollX;
+				offsetY = event.clientY + window.scrollY;
+			}
 		};
 
 		eyedropper.onpointerup = function (event) {
-			pointerdown = false;
-			let [x, y] = getCoords(event);
-			pickColor(x, y);
+			if (event.button == LEFT_MOUSE) {
+				event.preventDefault();
+				let [x, y] = getCoords(event);
+				pickColor(x, y);
+			}
 		};
+
+		eyedropper.oncontextmenu = function (event) {
+			event.preventDefault();
+		};
+
+		window.addEventListener('pointerup', function (event) {
+			if (event.button == LEFT_MOUSE) {
+				pointerdown = false;
+			}
+
+			if (event.button == RIGHT_MOUSE) {
+				rightButton = false;
+			}
+		});
 
 		eyedropper.querySelector('.image').append(image);
 		lens.prepend(zoomed);
