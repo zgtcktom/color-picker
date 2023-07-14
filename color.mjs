@@ -28,6 +28,132 @@ if (typeof window != 'undefined') {
 		});
 	}
 
+	let fractionDigits = 2;
+
+	let colorFields = {
+		rgb: {
+			label: 'RGB',
+			text(rgba) {
+				let [r, g, b, a] = rgba;
+				[r, g, b] = [r, g, b].map(c => Math.round(c * 255));
+				a = +(a * 100).toFixed(fractionDigits);
+				if (a == 100) {
+					return `rgb(${r} ${g} ${b})`;
+				}
+				return `rgb(${r} ${g} ${b} / ${a}%)`;
+			},
+		},
+		rgbLegacy: {
+			label: 'RGB`',
+			text(rgba) {
+				let [r, g, b, a] = rgba;
+				[r, g, b] = [r, g, b].map(c => Math.round(c * 255));
+				a = +(a * 100).toFixed(fractionDigits);
+				if (a == 100) {
+					return `rgb(${r}, ${g}, ${b})`;
+				}
+				return `rgb(${r}, ${g}, ${b}, ${a}%)`;
+			},
+		},
+		hex: {
+			label: 'HEX',
+			text(rgba) {
+				let [r, g, b, a] = rgba;
+				return `#${rgbToHex(r, g, b, a).toUpperCase()}`;
+			},
+		},
+		named: {
+			label: 'Named',
+			text(rgba) {
+				if (rgba[3] == 1) {
+					return `${rgbToNamed(...rgba)}`;
+				}
+				return 'null';
+			},
+		},
+		hsl: {
+			label: 'HSL',
+			text(rgba) {
+				let [r, g, b, a] = rgba;
+
+				let [h, s, l] = rgbToHsl(r, g, b);
+				h = Math.round(h * 360);
+				[s, l, a] = [s, l, a].map(c => +(c * 100).toFixed(fractionDigits));
+				if (a == 100) {
+					return `hsl(${h} ${s}% ${l}%)`;
+				}
+				return `hsl(${h} ${s}% ${l}% / ${a}%)`;
+			},
+		},
+		hwb: {
+			label: 'HWB',
+			text(rgba) {
+				let [r, g, b, a] = rgba;
+
+				let [h, w, black] = rgbToHwb(r, g, b);
+				h = Math.round(h * 360);
+
+				[w, black, a] = [w, black, a].map(c => +(c * 100).toFixed(2));
+				if (a == 100) {
+					return `hwb(${h} ${w}% ${black}%)`;
+				}
+				return `hwb(${h} ${w}% ${black}% / ${a}%)`;
+			},
+		},
+		cmyk: {
+			label: 'CMYK',
+			text(rgba) {
+				let [r, g, b, a] = rgba;
+
+				let [c, m, y, k] = rgbToCmyk(r, g, b);
+				[c, m, y, k, a] = [c, m, y, k, a].map(c => +(c * 100).toFixed(2));
+				if (a == 100) {
+					return `cmyk(${c}% ${m}% ${y}% ${k}%)`;
+				}
+				return `cmyk(${c}% ${m}% ${y}% ${k}% / ${a}%)`;
+			},
+		},
+		lab: {
+			label: 'LAB',
+			text(rgba) {
+				let [r, g, b, a] = rgba;
+
+				let [l, a_, b_] = rgbToLab(r, g, b);
+				[l, a_, b_, a] = [l, a_, b_, a].map(c => +(c * 100).toFixed(2));
+				if (a == 100) {
+					return `lab(${l}% ${a_}% ${b_}%)`;
+				}
+				return `lab(${l}% ${a_}% ${b_}% / ${a}%)`;
+			},
+		},
+	};
+
+	function createFields(colorFields) {
+		let template = document.createElement('template');
+		template.innerHTML = `
+<div class="field">
+	<label>RGB</label>
+	<input type="text" spellcheck="false" name="rgb" />
+	<button type="button" class="copy"></button>
+</div>
+`;
+		let fields = document.createDocumentFragment();
+		for (let name of Object.keys(colorFields)) {
+			let fragment = template.content.cloneNode(true);
+			fragment.querySelector('label').innerHTML = colorFields[name].label;
+			let input = fragment.querySelector('input');
+			input.name = name;
+			fragment.querySelector('button').onclick = function () {
+				navigator.clipboard.writeText(input.value);
+			};
+			fields.append(fragment);
+		}
+		return fields;
+	}
+
+	let colorList = document.querySelector('#colorList');
+	colorList.append(createFields(colorFields));
+
 	let container = document.querySelector('#colorpicker');
 
 	let grids = 9;
@@ -44,6 +170,7 @@ if (typeof window != 'undefined') {
 		position: relative;
 		cursor: crosshair;
 		display: flex;
+		overflow: hidden;
 	}
 	.eyedropper > .image{
 		flex: 1;
@@ -131,9 +258,6 @@ if (typeof window != 'undefined') {
 </div>
 `;
 
-	let preferredWidth = 500,
-		preferredHeight = 500;
-
 	/**
 	 *
 	 * @param {HTMLImageElement} image
@@ -158,7 +282,7 @@ if (typeof window != 'undefined') {
 			centerY = 0.5;
 
 		function resize() {
-			let rect = container.getBoundingClientRect();
+			let rect = image.parentElement.getBoundingClientRect();
 			let width, height;
 			if (image.naturalWidth / rect.width > image.naturalHeight / rect.height) {
 				width = rect.width * zoomScale();
@@ -197,7 +321,7 @@ if (typeof window != 'undefined') {
 
 		function setCenter(centerX, centerY, parentX = 0.5, parentY = 0.5) {
 			let { width, height } = getAbsoluteRect(image);
-			let { width: parentWidth, height: parentHeight } = getAbsoluteRect(container);
+			let { width: parentWidth, height: parentHeight } = getAbsoluteRect(image.parentElement);
 			let x = -width * centerX + parentWidth * parentX;
 			let y = -height * centerY + parentHeight * parentY;
 			image.style.left = `${Math.round(x)}px`;
@@ -207,7 +331,7 @@ if (typeof window != 'undefined') {
 
 		function getCenter(parentX = 0.5, parentY = 0.5) {
 			let rect = getAbsoluteRect(image);
-			let parentRect = getAbsoluteRect(container);
+			let parentRect = getAbsoluteRect(image.parentElement);
 			let { width, height } = rect;
 			let { width: parentWidth, height: parentHeight } = parentRect;
 
@@ -230,6 +354,7 @@ if (typeof window != 'undefined') {
 		}
 
 		container.onwheel = function (event) {
+			if (!event.ctrlKey) return;
 			event.preventDefault();
 			let parentRect = getAbsoluteRect(container);
 			let parentX = (event.clientX + window.scrollX - parentRect.x) / parentRect.width,
@@ -256,7 +381,7 @@ if (typeof window != 'undefined') {
 		eyedropper.ondblclick = function (event) {
 			centerX = 0.5;
 			centerY = 0.5;
-			zoomLevel = 1;
+			zoomLevel = 0;
 			resize();
 			setCenter(centerX, centerY);
 		};
@@ -264,10 +389,12 @@ if (typeof window != 'undefined') {
 		eyedropper.onpointerenter = function (event) {
 			onmove(event);
 			lens.style.visibility = 'visible';
+			lens.style.display = '';
 		};
 
 		eyedropper.onpointerleave = function (event) {
 			lens.style.visibility = 'hidden';
+			lens.style.display = 'none';
 		};
 
 		eyedropper.onpointermove = function (event) {
@@ -298,123 +425,15 @@ if (typeof window != 'undefined') {
 		};
 
 		function pickColor(x, y) {
-			let pixel = getPixel(x, y);
-			if (pixel[0] == undefined) {
-				pixel = [0, 0, 0, 0];
+			let rgba = getPixel(x, y);
+			if (rgba[0] == undefined) {
+				rgba = [0, 0, 0, 0];
 			}
-			pixel = pixel.map(c => c / 255);
-			{
-				let text;
-				let [r, g, b, a] = pixel;
-				r = Math.round(r * 255);
-				g = Math.round(g * 255);
-				b = Math.round(b * 255);
-				a = +(a * 100).toFixed(2) + '%';
-				if (a == '100%') {
-					text = `rgb(${r} ${g} ${b})`;
-				} else {
-					text = `rgb(${r} ${g} ${b} / ${a})`;
-				}
-				colorList.rgb.value = text;
+			rgba = rgba.map(c => c / 255);
+			for (let name of Object.keys(colorFields)) {
+				colorList[name].value = colorFields[name].text(rgba);
 			}
-			{
-				let text;
-				let [r, g, b, a] = pixel;
-				r = Math.round(r * 255);
-				g = Math.round(g * 255);
-				b = Math.round(b * 255);
-				a = +a.toFixed(2);
-				if (a == 1) {
-					text = `rgb(${r}, ${g}, ${b})`;
-				} else {
-					text = `rgba(${r}, ${g}, ${b}, ${a})`;
-				}
-				colorList.rgbLegacy.value = text;
-			}
-			{
-				let text = `#${rgbToHex(...pixel).toUpperCase()}`;
-				colorList.hex.value = text;
-			}
-			{
-				let text;
-				if (pixel[3] == 1) {
-					text = `${rgbToNamed(...pixel)}`;
-				} else {
-					text = 'null';
-				}
-
-				colorList.named.value = text;
-			}
-			{
-				let text;
-				let [r, g, b, a] = pixel;
-				a = +(a * 100).toFixed(2) + '%';
-
-				let [h, s, l] = rgbToHsl(r, g, b);
-				h = Math.round(h * 360);
-				s = +(s * 100).toFixed(2) + '%';
-				l = +(l * 100).toFixed(2) + '%';
-				if (a == '100%') {
-					text = `hsl(${h} ${s} ${l})`;
-				} else {
-					text = `hsl(${h} ${s} ${l} / ${a})`;
-				}
-
-				colorList.hsl.value = text;
-			}
-			{
-				let text;
-				let [r, g, b, a] = pixel;
-				a = +(a * 100).toFixed(2) + '%';
-
-				let [h, w, black] = rgbToHwb(r, g, b);
-				h = Math.round(h * 360);
-				w = +(w * 100).toFixed(2) + '%';
-				black = +(black * 100).toFixed(2) + '%';
-				if (a == '100%') {
-					text = `hwb(${h} ${w} ${black})`;
-				} else {
-					text = `hwb(${h} ${w} ${black} / ${a})`;
-				}
-
-				colorList.hwb.value = text;
-			}
-			{
-				let text;
-				let [r, g, b, a] = pixel;
-				a = +(a * 100).toFixed(2) + '%';
-
-				let [c, m, y, k] = rgbToCmyk(r, g, b);
-				c = +(c * 100).toFixed(2) + '%';
-				m = +(m * 100).toFixed(2) + '%';
-				y = +(y * 100).toFixed(2) + '%';
-				k = +(k * 100).toFixed(2) + '%';
-				if (a == '100%') {
-					text = `cmyk(${c} ${m} ${y} ${k})`;
-				} else {
-					text = `cmyk(${c} ${m} ${y} ${k} / ${a})`;
-				}
-
-				colorList.cmyk.value = text;
-			}
-			{
-				let text;
-				let [r, g, b, a] = pixel;
-				a = +(a * 100).toFixed(2) + '%';
-
-				let [l, a_, b_] = rgbToLab(r, g, b);
-				[l, a_, b_] = [l, a_, b_].map(c => +(c * 100).toFixed(2) + '%');
-				if (a == '100%') {
-					text = `lab(${l} ${a_} ${b_})`;
-				} else {
-					text = `lab(${l} ${a_} ${b_} / ${a})`;
-				}
-
-				colorList.lab.value = text;
-			}
-			console.log(pixel);
-
-			console.log(rgbToLab(1, 1, 1));
+			document.querySelector('#colorBar').style.background = colorList.rgb.value;
 		}
 
 		let pointerdown = false;
@@ -424,6 +443,7 @@ if (typeof window != 'undefined') {
 			RIGHT_MOUSE = 2;
 		let offsetX, offsetY;
 		eyedropper.onpointerdown = function (event) {
+			document.activeElement?.blur();
 			if (event.button == LEFT_MOUSE) {
 				event.preventDefault();
 				pointerdown = true;
@@ -432,6 +452,7 @@ if (typeof window != 'undefined') {
 			}
 
 			if (event.button == RIGHT_MOUSE) {
+				eyedropper.style.cursor = 'move';
 				event.preventDefault();
 				rightButton = true;
 				offsetX = event.clientX + window.scrollX;
@@ -440,7 +461,7 @@ if (typeof window != 'undefined') {
 		};
 
 		eyedropper.onpointerup = function (event) {
-			if (event.button == LEFT_MOUSE) {
+			if (pointerdown && event.button == LEFT_MOUSE) {
 				event.preventDefault();
 				let [x, y] = getCoords(event);
 				pickColor(x, y);
@@ -451,12 +472,13 @@ if (typeof window != 'undefined') {
 			event.preventDefault();
 		};
 
-		window.addEventListener('pointerup', function (event) {
+		document.addEventListener('pointerup', function (event) {
 			if (event.button == LEFT_MOUSE) {
 				pointerdown = false;
 			}
 
 			if (event.button == RIGHT_MOUSE) {
+				eyedropper.style.cursor = '';
 				rightButton = false;
 			}
 		});
@@ -492,7 +514,7 @@ if (typeof window != 'undefined') {
 
 			// console.log(rect.x + left + lens.clientWidth, document.documentElement.clientWidth);
 
-			let root = document.documentElement;
+			let root = eyedropper;
 
 			let right = rect.left + left + lens.clientWidth,
 				bottom = rect.top + top + lens.clientHeight;
@@ -535,6 +557,9 @@ if (typeof window != 'undefined') {
 			x = (x / scale) | 0;
 			y = (y / scale) | 0;
 
+			if (x < 0 || y < 0 || x >= image.naturalWidth || y >= image.naturalHeight) {
+				return [0, 0, 0, 0];
+			}
 			let position = (y * image.naturalWidth + x) * 4;
 			return [data[position], data[position + 1], data[position + 2], data[position + 3]];
 		}
@@ -575,8 +600,6 @@ if (typeof window != 'undefined') {
 		console.log('event.clipboardData', color);
 		createImage(color.map(c => Math.round(c * 255))).then(imageHandler);
 	});
-
-	let colorList = document.querySelector('#colorList');
 }
 
 /**
@@ -853,9 +876,9 @@ let parseColor = (() => {
 		return null;
 	}
 
-	for (let color of colors) {
-		console.log(parseColor(color));
-	}
+	// for (let color of colors) {
+	// 	console.log(parseColor(color));
+	// }
 
 	return parseColor;
 })();

@@ -1,0 +1,187 @@
+<html>
+	<head>
+		<title>Page Title</title>
+		<style>
+			* {
+				box-sizing: border-box;
+				font-family: 'Segoe UI', sans-serif;
+			}
+			html,
+			body {
+				background: #222;
+				margin: 0;
+			}
+			.color-list {
+				padding: 1em 1em;
+				margin: 0;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				color: #eee;
+			}
+			.color-list > .field {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				margin: 0.5em 0;
+				position: relative;
+			}
+			.color-list > .field > label {
+				text-align: right;
+				width: 7ch;
+				min-width: 7ch;
+				margin: auto 1em auto 0;
+			}
+			.color-list > .field > .color-bar {
+				flex: 1;
+				font-size: 0.9em;
+				height: 2.5em;
+				padding: 0.6em calc(2.5em + 0.5em) 0.6em 0.6em;
+				border: 0.1em solid #aaa;
+			}
+			.color-list > .field > input {
+				flex: 1;
+				font-size: 0.9em;
+				height: 2.5em;
+				padding: 0.6em calc(2.5em + 0.5em) 0.6em 0.6em;
+				border: 0.1em solid #aaa;
+				background: #222;
+				color: #eee;
+			}
+			.color-list > .field > input:focus {
+				outline: none;
+			}
+			.color-list > .field > .copy {
+				cursor: pointer;
+				position: absolute;
+				top: 0.1em;
+				right: 0.1em;
+				height: calc(100% - 0.2em);
+				aspect-ratio: 1 / 1;
+				background-color: #eee;
+				background-image: url("data:image/svg+xml,%3Csvg width='800px' height='800px' viewBox='0 0 24 24' version='1.1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'%3E%3C!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools --%3E%3Ctitle%3Eic_fluent_copy_24_regular%3C/title%3E%3Cdesc%3ECreated with Sketch.%3C/desc%3E%3Cg id='🔍-Product-Icons' stroke='none' stroke-width='1' fill='none' fill-rule='evenodd'%3E%3Cg id='ic_fluent_copy_24_regular' fill='%23212121' fill-rule='nonzero'%3E%3Cpath d='M5.50280381,4.62704038 L5.5,6.75 L5.5,17.2542087 C5.5,19.0491342 6.95507456,20.5042087 8.75,20.5042087 L17.3662868,20.5044622 C17.057338,21.3782241 16.2239751,22.0042087 15.2444057,22.0042087 L8.75,22.0042087 C6.12664744,22.0042087 4,19.8775613 4,17.2542087 L4,6.75 C4,5.76928848 4.62744523,4.93512464 5.50280381,4.62704038 Z M17.75,2 C18.9926407,2 20,3.00735931 20,4.25 L20,17.25 C20,18.4926407 18.9926407,19.5 17.75,19.5 L8.75,19.5 C7.50735931,19.5 6.5,18.4926407 6.5,17.25 L6.5,4.25 C6.5,3.00735931 7.50735931,2 8.75,2 L17.75,2 Z M17.75,3.5 L8.75,3.5 C8.33578644,3.5 8,3.83578644 8,4.25 L8,17.25 C8,17.6642136 8.33578644,18 8.75,18 L17.75,18 C18.1642136,18 18.5,17.6642136 18.5,17.25 L18.5,4.25 C18.5,3.83578644 18.1642136,3.5 17.75,3.5 Z' id='🎨-Color'%3E%3C/path%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+				background-position: center;
+				background-repeat: no-repeat;
+				background-size: 70%;
+				border: none;
+				filter: invert(100%);
+			}
+			.color-list > .field > .copy:hover {
+				background-color: #ccc;
+			}
+		</style>
+	</head>
+	<body>
+		<div style="display: flex; flex-direction: row; flex-wrap: wrap; min-height: 100vh">
+			<div id="colorpicker" style="flex: 10; min-width: 400px; min-height: 300px; position: relative">
+				<div
+					style="
+						position: absolute;
+						color: #eee;
+						display: flex;
+						top: 0;
+						left: 0;
+						width: 100%;
+						height: 100%;
+						flex-direction: column;
+						font-size: min(1.5em, max(1em, 2.5vw));
+						justify-content: center;
+					"
+				>
+					<div style="margin: 0 auto" title="image file, image, color code">
+						Paste (ctrl + v) from clipboard
+					</div>
+					<div style="margin: 0 auto">or</div>
+					<div style="margin: 0 auto">Drag and drop an image file here</div>
+					<div style="margin: 0 auto; width: 60%"><hr /></div>
+					<style>
+						.mouse::before {
+							content: '';
+							display: block;
+							position: absolute;
+							top: 40%;
+							left: 0;
+							width: 100%;
+							height: 0.1em;
+							background-color: #eee;
+							border-bottom-left-radius: 50%;
+							border-bottom-right-radius: 50%;
+						}
+						.mouse {
+							display: inline-block;
+							position: relative;
+							height: 1.5em;
+							aspect-ratio: 3 / 4;
+							border: 0.15em solid #eee;
+							border-radius: 40%;
+							overflow: hidden;
+						}
+						.mouse-middle::after {
+							content: '';
+							display: block;
+							position: absolute;
+							top: 5%;
+							left: calc(50% - 20% / 2);
+							width: 20%;
+							height: 30%;
+							background-color: #eee;
+						}
+						.mouse-left::after {
+							content: '';
+							display: block;
+							position: absolute;
+							top: 0;
+							left: 0;
+							width: 50%;
+							height: 40%;
+							background-color: #eee;
+						}
+						.mouse-right::after {
+							content: '';
+							display: block;
+							position: absolute;
+							top: 0;
+							right: 0;
+							width: 50%;
+							height: 40%;
+							background-color: #eee;
+						}
+					</style>
+					<div style="margin: 0 auto">
+						<table style="color: currentColor; font-size: 0.9em">
+							<tr>
+								<td style="padding-right: 1em"><em>color picking</em></td>
+								<td style="display: flex; justify-content: right; align-items: center">
+									<span class="mouse mouse-left"></span>
+								</td>
+							</tr>
+							<tr>
+								<td><em>panning</em></td>
+								<td style="display: flex; justify-content: right; align-items: center">
+									<span class="mouse mouse-right"></span>
+								</td>
+							</tr>
+							<tr>
+								<td><em>zooming</em></td>
+								<td style="display: flex; justify-content: right; align-items: center">
+									<span style="border: 1px solid #eee; padding: 0.1em 0.3em 0.1em 0.2em; font-size: 0.8em"
+										>ctrl</span
+									>
+									+
+									<span class="mouse mouse-middle"></span>
+								</td>
+							</tr>
+						</table>
+					</div>
+				</div>
+			</div>
+			<form class="color-list" id="colorList" style="flex: 1; min-width: 40ch; max-width: 100%">
+				<div class="field">
+					<label>Color</label>
+					<div class="color-bar" id="colorBar"></div>
+				</div>
+			</form>
+		</div>
+		<script src="./color.mjs" type="module"></script>
+	</body>
+</html>
