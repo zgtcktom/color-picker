@@ -583,6 +583,31 @@ if (typeof window != 'undefined') {
 		});
 	}
 
+	container.addEventListener('dragover', function (event) {
+		event.preventDefault();
+		event.stopPropagation();
+	});
+
+	container.addEventListener('drop', function (event) {
+		event.preventDefault();
+		event.stopPropagation();
+		for (let file of event.dataTransfer.files) {
+			if (file.type.startsWith('image/')) {
+				readAsImage(file).then(imageHandler);
+			}
+			console.log(file);
+			return;
+		}
+
+		let text = event.dataTransfer.getData('text/plain');
+		let color = parseColor(text);
+		if (color == null) return;
+
+		// #f00
+		console.log('event.dataTransfer', color);
+		createImage(color.map(c => Math.round(c * 255))).then(imageHandler);
+	});
+
 	document.body.addEventListener('paste', function (event) {
 		for (let file of event.clipboardData.files) {
 			if (file.type.startsWith('image/')) {
