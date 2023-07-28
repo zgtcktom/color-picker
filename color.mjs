@@ -625,6 +625,20 @@ if (typeof window != 'undefined') {
 		console.log('event.clipboardData', color);
 		createImage(color.map(c => Math.round(c * 255))).then(imageHandler);
 	});
+
+	document.querySelector('#intro').addEventListener('click', function () {
+		let input = document.querySelector('#uploadFile');
+		input.click();
+		input.onchange = function () {
+			for (let file of this.files) {
+				if (file.type.startsWith('image/')) {
+					readAsImage(file).then(imageHandler);
+				}
+				console.log(file);
+				return;
+			}
+		};
+	});
 }
 
 /**

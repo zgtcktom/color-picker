@@ -98,7 +98,9 @@
 		<div style="display: flex; flex-direction: row; flex-wrap: wrap; min-height: 100vh">
 			<div id="colorpicker" style="flex: 10; min-width: 400px; min-height: 300px; position: relative">
 				<div
+					id="intro"
 					style="
+						cursor: pointer;
 						position: absolute;
 						color: #eee;
 						display: flex;
@@ -111,6 +113,7 @@
 						justify-content: center;
 					"
 				>
+					<input type="file" id="uploadFile" hidden />
 					<div style="margin: 0 auto" title="image file, image, color code">
 						Paste (ctrl + v) from clipboard
 					</div>
