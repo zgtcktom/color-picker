@@ -2,6 +2,7 @@
 	<head>
 		<title>Simplistic Color Picker</title>
 		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 		<meta name="google-site-verification" content="aZcyKTZOHKoW-N3DwTar8nHWU8ltqaoN8Ao8f0fhAU4" />
 		<meta
 			name="description"
@@ -33,9 +34,10 @@
 				position: relative;
 				background: #222;
 				margin: 0;
+				padding: 0;
 			}
 			.color-list {
-				padding: 1em 1em;
+				padding: 1em 0.75em;
 				margin: 0;
 				display: flex;
 				flex-direction: column;
@@ -51,9 +53,9 @@
 			}
 			.color-list > .field > label {
 				text-align: right;
-				width: 7ch;
-				min-width: 7ch;
-				margin: auto 1em auto 0;
+				width: 6ch;
+				min-width: 6ch;
+				margin: auto 0.75em auto 0;
 			}
 			.color-list > .field > .color-bar {
 				flex: 1;
@@ -61,6 +63,7 @@
 				height: 2.5em;
 				padding: 0.6em calc(2.5em + 0.5em) 0.6em 0.6em;
 				border: 0.1em solid #aaa;
+				width: 100%;
 			}
 			.color-list > .field > input {
 				flex: 1;
@@ -70,6 +73,7 @@
 				border: 0.1em solid #aaa;
 				background: #222;
 				color: #eee;
+				width: 100%;
 			}
 			.color-list > .field > input:focus {
 				outline: none;
@@ -96,7 +100,10 @@
 	</head>
 	<body>
 		<div style="display: flex; flex-direction: row; flex-wrap: wrap; min-height: 100vh">
-			<div id="colorpicker" style="flex: 10; min-width: 400px; min-height: 300px; position: relative">
+			<div
+				id="colorpicker"
+				style="flex: 10; min-width: min(400px, 100vw); min-height: 300px; position: relative"
+			>
 				<div
 					id="intro"
 					style="
@@ -113,7 +120,7 @@
 						justify-content: center;
 					"
 				>
-					<input type="file" id="uploadFile" hidden />
+					<input type="file" accept="image/*" id="uploadFile" hidden />
 					<div style="margin: 0 auto" title="image file, image, color code">
 						Paste (ctrl + v) from clipboard
 					</div>
@@ -208,7 +215,7 @@
 					</div>
 				</div>
 			</div>
-			<form class="color-list" id="colorList" style="flex: 1; min-width: 40ch; max-width: 100%">
+			<form class="color-list" id="colorList" style="flex: 1; min-width: min(40ch, 100vw); max-width: 100%">
 				<div class="field">
 					<label>Color</label>
 					<div class="color-bar" id="colorBar"></div>

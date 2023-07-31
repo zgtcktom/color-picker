@@ -134,7 +134,7 @@ if (typeof window != 'undefined') {
 <div class="field">
 	<label>RGB</label>
 	<input type="text" spellcheck="false" name="rgb" />
-	<button type="button" class="copy"></button>
+	<a type="button" class="copy" style="z-index:999"></a>
 </div>
 `;
 		let fields = document.createDocumentFragment();
@@ -143,8 +143,17 @@ if (typeof window != 'undefined') {
 			fragment.querySelector('label').innerHTML = colorFields[name].label;
 			let input = fragment.querySelector('input');
 			input.name = name;
-			fragment.querySelector('button').onclick = function () {
-				navigator.clipboard.writeText(input.value);
+			fragment.querySelector('a').onclick = fragment.querySelector('a').ontouchend = function () {
+				if (navigator.clipboard) {
+					navigator.clipboard.writeText(input.value);
+				} else {
+					input.focus();
+					input.select();
+					try {
+						document.execCommand('copy');
+						input.blur();
+					} catch {}
+				}
 			};
 			fields.append(fragment);
 		}
@@ -442,8 +451,12 @@ if (typeof window != 'undefined') {
 		let LEFT_MOUSE = 0,
 			RIGHT_MOUSE = 2;
 		let offsetX, offsetY;
+		eyedropper.ontouchstart = function (event) {
+			event.preventDefault();
+		};
 		eyedropper.onpointerdown = function (event) {
 			document.activeElement?.blur();
+
 			if (event.button == LEFT_MOUSE) {
 				event.preventDefault();
 				pointerdown = true;
