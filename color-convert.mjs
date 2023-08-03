@@ -184,13 +184,14 @@ export function rgbToHex(r, g, b, a = undefined) {
 	r = Math.round(r * 255).toString(16);
 	g = Math.round(g * 255).toString(16);
 	b = Math.round(b * 255).toString(16);
-	if (r.length == 1) r = r + r;
-	if (g.length == 1) g = g + g;
-	if (b.length == 1) b = b + b;
+
+	if (r.length == 1) r = 0 + r;
+	if (g.length == 1) g = 0 + g;
+	if (b.length == 1) b = 0 + b;
 
 	if (a != undefined && Math.round(a * 255) != 255) {
 		a = Math.round(a * 255).toString(16);
-		if (a.length == 1) a = a + a;
+		if (a.length == 1) a = 0 + a;
 		return r + g + b + a;
 	}
 
@@ -592,4 +593,6 @@ if (typeof process != 'undefined' && process.env.NODE_ENV != 'production') {
 	console.log('rgbToCmyk', test(cmykToRgb, rgbToCmyk));
 
 	console.log('rgbToLab', test(labToRgb, rgbToLab));
+
+	// console.log('rgbToHex', rgbToHex(12 / 255, 167 / 255, 137 / 255, 1));
 }
